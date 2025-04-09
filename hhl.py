@@ -226,4 +226,6 @@ if __name__ == "__main__":
     # print(lol)
 
     _, filtered_counts = HHL(A, b, True)
-    print(filtered_counts)
+    norm_counts = {k: val / min(filtered_counts.values()) for k, val in filtered_counts.items()}
+    norm_x = [(value) ** 0.5 for _, value in sorted(norm_counts.items())]
+    print('Normalized x:', norm_x)
