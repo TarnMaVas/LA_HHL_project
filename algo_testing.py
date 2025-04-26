@@ -62,7 +62,8 @@ def plot_normed_distance_bar(x_labels, pairs, ord=2, title=None, rotation=45):
 
 if __name__ == "__main__":
 
-    evals = [1, 1, 1, 1, 3, 2, 3, 2]
+    # evals = [1, 1, 1, 1, 3, 2, 3, 2]
+    evals = [1, 2, 3, 4]
     A = symmetric_from_eigenvalues(evals, 1)
     print(A)
 
@@ -72,7 +73,8 @@ if __name__ == "__main__":
 
         print("\\")
 
-    b = np.array([1, 1, 1, 1, 0, 0, 2, 3])
+    # b = np.array([1, 1, 1, 1, 0, 0, 2, 3])
+    b = np.array([1, 1, 1, 1])
 
     orig_sol = np.linalg.solve(A, b)
     orig_sol = orig_sol / np.linalg.norm(orig_sol)
@@ -81,7 +83,7 @@ if __name__ == "__main__":
 
     vector_pairs = []
 
-    shots_list = [32, 64, 128, 256, 512, 1024, 2048, 4096][-3:]
+    shots_list = [32, 64, 128, 256, 512, 1024, 2048, 4096]
 
     for num_shots in shots_list:
         _, filtered_counts = hhl.HHL(A, b, num_shots)
