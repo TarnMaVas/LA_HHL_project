@@ -9,7 +9,14 @@ from qiskit.quantum_info import Pauli, partial_trace
 from qiskit.visualization import plot_bloch_vector
 import matplotlib.pyplot as plt
 from math import pi, ceil
-import scipy
+from qiskit.circuit.library import PauliEvolutionGate
+from c_est import estimate_min, estimate_max
+
+import numpy as np
+from scipy.sparse import csr_matrix
+from qiskit.synthesis.evolution import LieTrotter
+from decomposition import sparse_pauli_decomposition
+
 
 def process_qbit(qc: QuantumCircuit, qbit: int):
     
@@ -41,49 +48,42 @@ def prepare_register(qc: QuantumCircuit, b: np.array, target_reg: QuantumRegiste
     b_normalized = b / np.linalg.norm(b)
     qc.initialize(b_normalized, target_reg)
 
-def eiAt(circuit, c_reg, b_reg, A, t):
+def eiAt(qc, c_reg, b_reg, A, t, reps=1):
+    sparse_op = sparse_pauli_decomposition(csr_matrix(A))
 
-    num_controls = len(c_reg)
+    for k in range(len(c_reg)):
 
-    for k in range(num_controls):
+        scaled_time = (2 ** k) * t
+        evo_gate = PauliEvolutionGate(sparse_op, time=-scaled_time, synthesis=LieTrotter(reps=reps))
+        controlled_evo = evo_gate.control()
+        qc.append(controlled_evo, [c_reg[k]] + list(b_reg))
 
-        scaled_time = (2**k) * t
+    return qc
 
-        h_gate = HamiltonianGate(-A, scaled_time)
+def reverse_eiAt(qc, c_reg, b_reg, A, t, reps=1):
+    sparse_op = sparse_pauli_decomposition(csr_matrix(A))
 
-        controlled_h = h_gate.control(1)
-        circuit.append(controlled_h, [c_reg[k]] + list(b_reg))
-    
-    return circuit
+    for k in reversed(range(len(c_reg))):
 
-def reverse_eiAt(circuit, c_reg, b_reg, A, t):
-    num_controls = len(c_reg)
+        scaled_time = (2 ** k) * t
+        evo_gate = PauliEvolutionGate(sparse_op, time=scaled_time, synthesis=LieTrotter(reps=reps))
+        controlled_evo = evo_gate.control()
+        qc.append(controlled_evo, [c_reg[k]] + list(b_reg))
 
-    for k in reversed(range(num_controls)):
-        scaled_time = (2**k) * t
+    return qc
 
-        h_gate = HamiltonianGate(A, scaled_time) 
-
-        controlled_h = h_gate.control(1)
-
-        circuit.append(controlled_h, [c_reg[k]] + list(b_reg))
-
-
-
-def estimate_c_reg_size(A):
-    eigvals = np.linalg.eigvals(A)
-    min_eigh = min(abs(eigvals))
-    norm_eigh = eigvals / min_eigh
-
-    n_c = ceil(max(norm_eigh)).bit_length()
-    return n_c, norm_eigh
-
-def add_controlled_rotations(circuit, c_req, a_reg, eigvals, C):
+def add_controlled_rotations(circuit, c_req, a_reg):
     num_c = len(c_req)
+    C = 1 / (2 ** num_c)
 
-    for eigenval in eigvals:
+    for i in range(2 ** num_c):
 
-        binary_repr = format(ceil(eigenval), f"0{num_c}b")
+        if not i:
+            continue
+
+        binary_repr = format(ceil(i), f"0{num_c}b")
+
+        eigenval = i / (2 ** num_c)
 
         control_qubits = [c_req[num_c - i - 1] for i, bit in enumerate(binary_repr) if bit == "1"]
 
@@ -93,10 +93,13 @@ def add_controlled_rotations(circuit, c_req, a_reg, eigvals, C):
 
 
 def HHL_sim(A, b, draw_qc = False):
-    n_c, norm_eigh = estimate_c_reg_size(A)
+    min_eig = estimate_min(A)
+    max_eig = estimate_max(A)
+    n_c  = ceil(max_eig / min_eig).bit_length()
+
     n_b = ceil(np.log2(len(b)))
 
-    t = 3 * pi / 4
+    t = pi / max_eig
 
     c_reg = QuantumRegister(n_c, "c")
     b_reg = QuantumRegister(n_b, "b")
@@ -125,7 +128,7 @@ def HHL_sim(A, b, draw_qc = False):
 
     qc.barrier()
     
-    add_controlled_rotations(qc, c_reg, a_reg, norm_eigh, 1)
+    add_controlled_rotations(qc, c_reg, a_reg)
 
     qc.barrier()
 
@@ -153,10 +156,13 @@ def HHL_sim(A, b, draw_qc = False):
 
 
 def HHL(A, b, draw_qc = False):
-    n_c, norm_eigh = estimate_c_reg_size(A)
+    min_eig = estimate_min(A)
+    max_eig = estimate_max(A)
+    n_c  = ceil(max_eig / min_eig).bit_length()
+
     n_b = ceil(np.log2(len(b)))
 
-    t = 3 * pi / 4
+    t = pi / max_eig
 
     c_reg = QuantumRegister(n_c, "c")
     b_reg = QuantumRegister(n_b, "b")
@@ -185,7 +191,7 @@ def HHL(A, b, draw_qc = False):
 
     qc.barrier()
     
-    add_controlled_rotations(qc, c_reg, a_reg, norm_eigh, 1)
+    add_controlled_rotations(qc, c_reg, a_reg)
 
     qc.barrier()
 
