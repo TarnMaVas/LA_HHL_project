@@ -95,7 +95,7 @@ def add_controlled_rotations(circuit, c_req, a_reg):
 def HHL_sim(A, b, draw_qc = False):
     min_eig = estimate_min(A)
     max_eig = estimate_max(A)
-    n_c  = ceil(max_eig / min_eig).bit_length()
+    n_c  = min(ceil(max_eig / min_eig).bit_length(), 10)
 
     n_b = ceil(np.log2(len(b)))
 
@@ -158,7 +158,7 @@ def HHL_sim(A, b, draw_qc = False):
 def HHL(A, b, draw_qc = False):
     min_eig = estimate_min(A)
     max_eig = estimate_max(A)
-    n_c  = ceil(max_eig / min_eig).bit_length()
+    n_c  = min(ceil(max_eig / min_eig).bit_length(), 10)
 
     n_b = ceil(np.log2(len(b)))
 
