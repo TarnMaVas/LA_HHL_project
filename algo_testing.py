@@ -62,19 +62,17 @@ def plot_normed_distance_bar(x_labels, pairs, ord=2, title=None, rotation=45):
 
 if __name__ == "__main__":
 
-    # evals = [1, 1, 1, 1, 3, 2, 3, 2]
-    evals = [1, 2, 3, 4]
+    evals = np.array(range(1, 65))
     A = symmetric_from_eigenvalues(evals, 1)
-    print(A)
 
-    for row in A:
-        for el in row:
-            print(f"{el:.2f}", end="&")
+    # for row in A:
+    # for el in row:
+    # print(f"{el:.2f}", end="&")
 
-        print("\\")
+    # print("\\\\")
 
     # b = np.array([1, 1, 1, 1, 0, 0, 2, 3])
-    b = np.array([1, 1, 1, 1])
+    b = evals.copy()
 
     orig_sol = np.linalg.solve(A, b)
     orig_sol = orig_sol / np.linalg.norm(orig_sol)
@@ -83,19 +81,27 @@ if __name__ == "__main__":
 
     vector_pairs = []
 
-    shots_list = [32, 64, 128, 256, 512, 1024, 2048, 4096]
+    shots_list = [
+        32,
+        64,
+        128,
+        256,
+        512,
+        1024,
+        2048,
+        4096,
+        8192,
+        16384,
+        32768,
+    ][-1:]
+
+    # for _ in range(3):
+    # sol = np.linalg.solve(A, b)
 
     for num_shots in shots_list:
         _, filtered_counts = hhl.HHL(A, b, num_shots)
-        norm_counts = {
-            k: val / min(filtered_counts.values()) for k, val in filtered_counts.items()
-        }
-        norm_x = [(value) ** 0.5 for _, value in sorted(norm_counts.items())]
-
-        squared_ratios = square_ratios(norm_x)
-        vector_pairs.append((orig_squared_ratios, squared_ratios))
-
-    plot_normed_distance_bar(
-        list(map(str, shots_list)),
-        vector_pairs,
-    )
+    #     norm_counts = {
+    #         k: val / min(filtered_counts.values()) for k, val in filtered_counts.items()
+    #     }
+    #     norm_x = [(value) ** 0.5 for _, value in sorted(norm_counts.items())]
+    #     print(norm_x)

@@ -1,10 +1,11 @@
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister, transpile
-from qiskit_aer import Aer
+from qiskit_aer import Aer, AerSimulator, QasmSimulator
 from qiskit.quantum_info import Statevector
 from qiskit.visualization import plot_bloch_multivector
 from qiskit.circuit.library import HamiltonianGate, RYGate, UnitaryGate
 from qiskit.quantum_info import SparsePauliOp
+from qiskit_ibm_runtime.fake_provider import FakeVigoV2
 from qiskit.quantum_info import Pauli, partial_trace
 from qiskit.visualization import plot_bloch_vector
 import matplotlib.pyplot as plt
@@ -104,7 +105,7 @@ def add_controlled_rotations(circuit, c_req, a_reg):
 def HHL_sim(A, b, draw_qc=False):
     min_eig = estimate_min(A)
     max_eig = estimate_max(A)
-    n_c  = min(ceil(max_eig / min_eig).bit_length(), 10)
+    n_c = min(ceil(max_eig / min_eig).bit_length(), 10)
 
     n_b = ceil(np.log2(len(b)))
 
@@ -165,9 +166,14 @@ def HHL_sim(A, b, draw_qc=False):
 
 
 def HHL(A, b, num_shots=1024, draw_qc=False):
-    min_eig = estimate_min(A)
-    max_eig = estimate_max(A)
-    n_c  = min(ceil(max_eig / min_eig).bit_length(), 10)
+    # min_eig = estimate_min(A)
+    # max_eig = estimate_max(A)
+
+    evals = np.linalg.eigvals(A)
+    min_eig = min(evals)
+    max_eig = max(evals)
+
+    n_c = min(ceil(max_eig / min_eig).bit_length(), 10)
 
     n_b = ceil(np.log2(len(b)))
 
@@ -221,7 +227,13 @@ def HHL(A, b, num_shots=1024, draw_qc=False):
     for i in range(n_b):
         qc.measure(b_reg[i], clas[i + 1])
 
-    backend = Aer.get_backend("qasm_simulator")
+    backend = AerSimulator(
+        shots=num_shots,
+        max_parallel_threads=0,
+        blocking_qubits=True,
+        max_parallel_experiments=0,
+        max_parallel_shots=0,
+    )
 
     transpiled_qc = transpile(qc, backend)
     result = backend.run(transpiled_qc, shots=num_shots).result()
@@ -243,7 +255,7 @@ if __name__ == "__main__":
     # meow, lol = HHL_sim(A, b, True)
     # print(lol)
 
-    _, filtered_counts = HHL(A, b)
+    _, filtered_counts = HHL(A, b, 1024)
     norm_counts = {
         k: val / min(filtered_counts.values()) for k, val in filtered_counts.items()
     }
